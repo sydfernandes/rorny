@@ -46,11 +46,11 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { registerSchema } from "@/lib/validations/auth"
-import { signUpWithEmail, signInWithGoogle, signInWithFacebook } from "@/lib/auth"
+import { createUserWithVerification } from "@/lib/auth"
 import { PasswordValidation } from "@/components/password-validation"
 import type { z } from "zod"
-import { AuthLayout } from "../components/auth-layout"
-import { SocialButtons } from "../components/social-buttons"
+import { AuthLayout } from "@/components/auth/auth-layout"
+import { SocialButtons } from "@/components/auth/social-buttons"
 
 type FormData = z.infer<typeof registerSchema>
 
@@ -74,23 +74,32 @@ export default function RegisterPage() {
 
   async function onSubmit(data: FormData) {
     setIsLoading(true)
-    const { user, error } = await signUpWithEmail(data.email, data.password, data.name)
-    setIsLoading(false)
-
-    if (error) {
-      return toast({
+    try {
+      // Create user with Firebase and send verification email
+      const user = await createUserWithVerification(data.email, data.password)
+      
+      if (user) {
+        toast({
+          title: "Registration successful",
+          description: "Please check your email to verify your account.",
+        })
+        router.push('/verify-email')
+      } else {
+        toast({
+          title: "Registration failed",
+          description: "This email might already be registered.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Registration error:', error)
+      toast({
         title: "Error",
-        description: error,
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       })
-    }
-
-    if (user) {
-      router.push("/dashboard")
-      toast({
-        title: "Success",
-        description: "Your account has been created.",
-      })
+    } finally {
+      setIsLoading(false)
     }
   }
 

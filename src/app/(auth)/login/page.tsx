@@ -46,8 +46,8 @@ import { useToast } from "@/hooks/use-toast"
 import { loginSchema } from "@/lib/validations/auth"
 import { signInWithEmail, signInWithGoogle, signInWithFacebook } from "@/lib/auth"
 import type { z } from "zod"
-import { AuthLayout } from "../components/auth-layout"
-import { SocialButtons } from "../components/social-buttons"
+import { AuthLayout } from "@/components/auth/auth-layout"
+import { SocialButtons } from "@/components/auth/social-buttons"
 
 type FormData = z.infer<typeof loginSchema>
 

@@ -7,6 +7,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 - [Authentication Flow](/docs/auth-flow.md) - Complete authentication system documentation
 - [Email Verification](/docs/email-verification.md) - Email verification flow and implementation
 - [Database Schema](/docs/database-schema.md) - Database structure and relationships
+- [Folder Structure](/docs/folder-structure.md) - Project organization and architecture
 - [Recommendations](/recommendations.md) - Project recommendations and future improvements
 
 ## Getting Started

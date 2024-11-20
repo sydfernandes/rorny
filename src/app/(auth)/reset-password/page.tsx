@@ -1,22 +1,12 @@
 /**
- * Password Reset Page Component
- * 
- * Purpose:
- * Handles the password reset process for users who have forgotten their passwords.
- * Provides a secure interface for initiating and completing password reset.
- * 
- * Functionality:
- * - Email input for password reset initiation
- * - Form validation using Zod schema
- * - Loading states during reset request
- * - Error handling and user feedback
- * - Success confirmation and next steps
- * - Links back to login page
+ * Password Reset Page
+ * Handles password reset requests and completion using Firebase Auth
+ * Supports both initiating reset and handling reset completion via email link
  */
 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import Link from "next/link"
@@ -41,86 +31,143 @@ import {
 } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { resetPasswordSchema } from "@/lib/validations/auth"
-import { resetPassword } from "@/lib/auth"
-import type { z } from "zod"
-import { AuthLayout } from "../components/auth-layout"
+import { AuthLayout } from "@/components/auth/auth-layout"
+import { useSearchParams } from "next/navigation"
+import { useRouter } from "next/router"
 
 type FormData = z.infer<typeof resetPasswordSchema>
 
 export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [mode, setMode] = useState<'request' | 'reset'>('request')
+  const [oobCode, setOobCode] = useState<string>('')
   const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Check for oobCode (out-of-band code) from Firebase email link
+  useEffect(() => {
+    const code = searchParams.get('oobCode')
+    if (code) {
+      setOobCode(code)
+      setMode('reset')
+    }
+  }, [searchParams])
 
   const form = useForm<FormData>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
-      email: "",
-    },
+      email: '',
+      password: ''
+    }
   })
 
   async function onSubmit(data: FormData) {
     setIsLoading(true)
-    const { error } = await resetPassword(data.email)
-    setIsLoading(false)
+    try {
+      if (mode === 'request') {
+        const response = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: data.email })
+        })
 
-    if (error) {
-      return toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
+        if (!response.ok) {
+          throw new Error('Failed to request password reset')
+        }
+
+        toast({
+          title: 'Check your email',
+          description: 'If an account exists, you will receive a password reset link.'
+        })
+      } else {
+        const response = await fetch('/api/auth/reset-password', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            code: oobCode,
+            password: data.password 
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to reset password')
+        }
+
+        toast({
+          title: 'Password reset successful',
+          description: 'You can now log in with your new password.'
+        })
+
+        // Redirect to login page after successful reset
+        router.push('/login')
+      }
+    } catch (error) {
+      console.error('Reset password error:', error)
+      toast({
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+        variant: 'destructive'
       })
+    } finally {
+      setIsLoading(false)
     }
-
-    toast({
-      title: "Success",
-      description: "Check your email for a reset link.",
-    })
   }
 
   return (
     <AuthLayout>
-      <Card className="border-none shadow-lg">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight">Reset password</CardTitle>
+      <Card>
+        <CardHeader>
+          <CardTitle>Reset Password</CardTitle>
           <CardDescription>
-            Enter your email address and we&apos;ll send you a reset link
+            {mode === 'request' 
+              ? 'Enter your email to receive a password reset link'
+              : 'Enter your new password'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="name@example.com" 
-                        type="email"
-                        autoComplete="email"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button className="w-full" type="submit" disabled={isLoading}>
-                {isLoading && (
-                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Send Reset Link
-              </Button>
-            </form>
-          </Form>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {mode === 'request' ? (
+              <div className="space-y-2">
+                <FormLabel htmlFor="email">Email</FormLabel>
+                <FormControl>
+                  <Input
+                    id="email"
+                    type="email"
+                    disabled={isLoading}
+                    {...form.register('email')}
+                  />
+                </FormControl>
+                <FormMessage />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <FormLabel htmlFor="password">New Password</FormLabel>
+                <FormControl>
+                  <Input
+                    id="password"
+                    type="password"
+                    disabled={isLoading}
+                    {...form.register('password')}
+                  />
+                </FormControl>
+                <FormMessage />
+              </div>
+            )}
+            <Button disabled={isLoading} type="submit" className="w-full">
+              {isLoading && (
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {mode === 'request' ? 'Send Reset Link' : 'Reset Password'}
+            </Button>
+          </form>
         </CardContent>
         <CardFooter>
           <p className="text-sm text-muted-foreground text-center w-full">
             Remember your password?{" "}
             <Link href="/login" className="font-medium text-primary hover:underline">
-              Sign in
+              Back to login
             </Link>
           </p>
         </CardFooter>
