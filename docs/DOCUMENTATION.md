@@ -8,10 +8,11 @@
    - [Core Components](#core-components)
    - [Application Components](#application-components)
 4. [Features](#features)
-5. [Directory Structure](#directory-structure)
-6. [Configuration](#configuration)
-7. [Development](#development)
-8. [Additional Resources](#additional-resources)
+5. [User Journeys](#user-journeys)
+6. [Directory Structure](#directory-structure)
+7. [Configuration](#configuration)
+8. [Development](#development)
+9. [Additional Resources](#additional-resources)
 
 ## Project Overview
 
@@ -65,6 +66,32 @@ Rorny is a Next.js-based social media application with TypeScript support, utili
 ## Features
 
 For detailed feature documentation, please refer to [FEATURES.md](./features/FEATURES.md).
+
+## User Journeys
+
+Detailed user journey documentation is available for each major component of the application:
+
+1. [Authentication Journey](./user-journeys/authentication-journey.md)
+2. [Profile Management Journey](./user-journeys/profile-management-journey.md)
+3. [Messaging Journey](./user-journeys/messaging-journey.md)
+4. [Groups Journey](./user-journeys/groups-journey.md)
+5. [Media Journey](./user-journeys/media-journey.md)
+6. [Search Journey](./user-journeys/search-journey.md)
+7. [Notifications Journey](./user-journeys/notifications-journey.md)
+8. [Settings Journey](./user-journeys/settings-journey.md)
+9. [Safety Journey](./user-journeys/safety-journey.md)
+10. [Explore Journey](./user-journeys/explore-journey.md)
+11. [Stories Journey](./user-journeys/stories-journey.md)
+12. [Ads Journey](./user-journeys/ads-journey.md)
+13. [Help Journey](./user-journeys/help-journey.md)
+
+Each user journey document provides:
+- Visual flow diagram
+- Detailed step descriptions
+- Expected outcomes
+- Error scenarios
+- Technical considerations
+- Privacy and security measures
 
 ### Development Features
 
