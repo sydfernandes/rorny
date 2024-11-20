@@ -43,22 +43,22 @@ Rorny is a Next.js-based social media application with TypeScript support, utili
 
 ### Application Components
 
-| Component                | Description                                                                 | Implementation                                          |
-|--------------------------|-----------------------------------------------------------------------------|--------------------------------------------------------|
-| Auth                     | Authentication-related functionalities                                      | Firebase Authentication with social providers           |
-| Home                     | Main home page and feed                                                    | Firestore for content, Realtime DB for live updates    |
-| Profile                  | User profile management                                                    | Firestore for data, Storage for media                  |
-| Messages                 | Messaging system                                                           | Realtime Database for instant messaging                |
-| Groups                   | Group functionalities                                                      | Firestore for data, Realtime DB for active users      |
-| Media                    | Media management                                                           | Firebase Storage with Firestore metadata               |
-| Search                   | Global search                                                              | Firestore queries with proper indexing                 |
-| Notifications            | Notification system                                                        | Realtime Database with Cloud Functions                 |
-| Settings                 | User preferences                                                           | Firestore with client-side caching                     |
-| Safety                   | Content moderation                                                         | Cloud Functions with ML integration                    |
-| Explore                  | Content discovery                                                          | Firestore queries with pagination                      |
-| Stories                  | Temporary content                                                          | Storage for media, Realtime DB for views              |
-| Ads                      | Advertising system                                                         | Firestore for targeting, Analytics for tracking        |
-| Help                     | Support resources                                                          | Static content with dynamic FAQ from Firestore         |
+| Component                | Description                                                                 | Implementation                                          | Features Reference |
+|--------------------------|-----------------------------------------------------------------------------|--------------------------------------------------------|-------------------|
+| Auth                     | Authentication-related functionalities                                      | Firebase Authentication with social providers           | [Auth Features](./features/FEATURES.md#authentication-features) |
+| Home                     | Main home page and feed                                                    | Firestore for content, Realtime DB for live updates    | [Home Features](./features/FEATURES.md#home-features) |
+| Profile                  | User profile management                                                    | Firestore for data, Storage for media                  | [Profile Features](./features/FEATURES.md#profile-features) |
+| Messages                 | Messaging system                                                           | Realtime Database for instant messaging                | [Messages Features](./features/FEATURES.md#messages-features) |
+| Groups                   | Group functionalities                                                      | Firestore for data, Realtime DB for active users      | [Groups Features](./features/FEATURES.md#groups-features) |
+| Media                    | Media management                                                           | Firebase Storage with Firestore metadata               | [Media Features](./features/FEATURES.md#media-features) |
+| Search                   | Global search                                                              | Firestore queries with proper indexing                 | [Search Features](./features/FEATURES.md#search-features) |
+| Notifications            | Notification system                                                        | Realtime Database with Cloud Functions                 | [Notifications Features](./features/FEATURES.md#notifications-features) |
+| Settings                 | User preferences                                                           | Firestore with client-side caching                     | [Settings Features](./features/FEATURES.md#settings-features) |
+| Safety                   | Content moderation                                                         | Cloud Functions with ML integration                    | [Safety Features](./features/FEATURES.md#safety-features) |
+| Explore                  | Content discovery                                                          | Firestore queries with pagination                      | [Explore Features](./features/FEATURES.md#explore-features) |
+| Stories                  | Temporary content                                                          | Storage for media, Realtime DB for views              | [Stories Features](./features/FEATURES.md#stories-features) |
+| Ads                      | Advertising system                                                         | Firestore for targeting, Analytics for tracking        | [Ads Features](./features/FEATURES.md#ads-features) |
+| Help                     | Support resources                                                          | Static content with dynamic FAQ from Firestore         | [Help Features](./features/FEATURES.md#help-features) |
 
 ## Features
 
@@ -112,36 +112,3 @@ rorny/
 | `postcss.config.mjs`| PostCSS configuration for Tailwind                        |
 | `tailwind.config.ts`| Tailwind CSS configuration                               |
 | `tsconfig.json`     | TypeScript configuration                                  |
-
-## Development
-
-### Getting Started
-
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Set up Firebase project and credentials
-4. Configure environment variables
-5. Run development server: `npm run dev`
-
-### Firebase Setup
-
-1. Create a Firebase project
-2. Enable required services:
-   - Authentication
-   - Firestore
-   - Realtime Database
-   - Storage
-   - Cloud Functions
-3. Configure security rules
-4. Set up Firebase configuration in the application
-
-For detailed Firebase implementation guidelines, refer to [Firebase Guide](./technical/firebase-guide.md).
-
-## Additional Resources
-
-- [API Reference](./technical/api-reference.md)
-- [Real-time Features](./technical/websocket.md)
-- [Deployment Guide](./technical/deployment.md)
-- [Component Library](./src/components)
-
-For more detailed information about specific components or features, please refer to the respective documentation in the `/docs` directory.
