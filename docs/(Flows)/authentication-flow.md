@@ -17,17 +17,33 @@
 
 2. **Profile Check**
    - System verifies profile completion
-   - New users → Profile Builder
-   - Incomplete profiles → Profile Builder
+   - New users → Profile Wizard
+   - Incomplete profiles → Profile Wizard
 
-3. **Profile Builder**
-   - Collects: username, bio, role, images
-   - Mandatory completion before app access
+3. **Profile Wizard**
+   - Multi-step guided process with progress indicators
+   - All fields are required for completion
+   - Required completion before app access
    - Progress saved between sessions
+   
+   ### Step 1: Personal Information
+   - Username (3-30 characters, unique, alphanumeric with dots and underscores)
+   - Display Name (16 char limit)
+   - Bio Text (240 char limit)
+   - Birthdate (with age validation)
+   - Gender (customizable selection)
+   - Pronouns (customizable selection)
+   
+   ### Step 2: Sexual Information
+   - Sexual Orientation (multi-select)
+   - Sexual Position
+   - Interested In (multi-select)
+   - Relationship Status
+   - Looking For (multi-select)
 
 4. **Access Grant**
    - Complete profile → App-Home
-   - Incomplete profile → Return to Profile Builder
+   - Incomplete profile → Return to Profile Wizard
 
 ## Flow Diagrams
 
@@ -53,34 +69,46 @@ graph TD
     K --> B
     
     J -->|Complete| L[App Home]
-    J -->|Incomplete| M[Profile Builder]
+    J -->|Incomplete| M[Profile Wizard]
 ```
 
-### Profile Setup Flow
+### Profile Wizard Flow
 ```mermaid
 graph TD
     A[Profile Check] --> B{Profile Status}
-    B -->|New User| C[Profile Builder]
+    B -->|New User| C[Profile Wizard]
     B -->|Incomplete| C
     B -->|Complete| D[App Home]
     
-    C --> E[Collect Info]
-    E --> F[Username]
-    E --> G[Bio]
-    E --> H[Role]
-    E --> I[Images]
+    C --> E[Step 1: Personal Info]
+    E --> E1[Username]
+    E --> E2[Display Name]
+    E --> E3[Birthdate]
+    E --> E4[Gender]
+    E --> E5[Pronouns]
     
-    F & G & H & I --> J{All Required<br>Fields Complete?}
-    J -->|Yes| K[Save Profile]
-    J -->|No| L[Save Progress]
+    E1 & E2 & E3 & E4 & E5 --> F{Step 1<br>Complete?}
+    F -->|No| G[Save Progress]
+    F -->|Yes| H[Step 2: Sexual Info]
     
-    K --> D
-    L --> M[Exit]
-    M --> N[Next Login]
-    N --> A
+    H --> H1[Sexual Orientation]
+    H --> H2[Sexual Position]
+    H --> H3[Interested In]
+    H --> H4[Relationship Status]
+    H --> H5[Looking For]
+    
+    H1 & H2 & H3 & H4 & H5 --> I{Step 2<br>Complete?}
+    I -->|No| G
+    I -->|Yes| J[Save Profile]
+    
+    G --> K[Exit]
+    K --> L[Next Login]
+    L --> A
+    
+    J --> D
 ```
 
 ## Navigation
 - **Auth Page** → Login/Register options
-- **Profile Builder** → User data collection
+- **Profile Wizard** → Step-by-step profile setup
 - **App-Home** → Main application access (verified users only)
