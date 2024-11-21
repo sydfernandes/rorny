@@ -2,78 +2,70 @@
  * Rate Limiting Middleware
  * 
  * Purpose:
- * Implements rate limiting for authentication endpoints to prevent brute force attacks
- * and protect against DoS attempts.
+ * Implements basic rate limiting for authentication endpoints
  * 
  * Functionality:
  * - Tracks login attempts by IP address
- * - Implements sliding window rate limiting
+ * - Implements a simple in-memory rate limiting
  * - Provides different limits for various authentication endpoints
- * - Uses Redis for distributed rate limiting
  */
 
-import { Ratelimit } from "@upstash/ratelimit"
-import { Redis } from "@upstash/redis"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-// Initialize Redis client
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || "",
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
-})
+// Simple in-memory store for rate limiting
+const attempts = new Map<string, { count: number; timestamp: number }>()
 
-// Create rate limiters for different actions
-const loginLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, "5 m"), // 5 attempts per 5 minutes
-  analytics: true,
-  prefix: "ratelimit:login",
-})
-
-const resetPasswordLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(3, "60 m"), // 3 attempts per hour
-  analytics: true,
-  prefix: "ratelimit:reset",
-})
-
-const registerLimiter = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(3, "60 m"), // 3 accounts per hour
-  analytics: true,
-  prefix: "ratelimit:register",
-})
+// Rate limit configurations
+const limits = {
+  login: { max: 5, window: 5 * 60 * 1000 }, // 5 attempts per 5 minutes
+  reset: { max: 3, window: 60 * 60 * 1000 }, // 3 attempts per hour
+  register: { max: 3, window: 60 * 60 * 1000 }, // 3 accounts per hour
+}
 
 export async function rateLimit(
   request: NextRequest,
   type: "login" | "reset" | "register"
 ) {
-  const ip = request.ip ?? "127.0.0.1"
-  const limiter = {
-    login: loginLimiter,
-    reset: resetPasswordLimiter,
-    register: registerLimiter,
-  }[type]
+  const ip = request.ip || "127.0.0.1"
+  const key = `${type}:${ip}`
+  const now = Date.now()
+  const limit = limits[type]
 
-  const { success, limit, reset, remaining } = await limiter.limit(ip)
-
-  if (!success) {
-    return NextResponse.json(
-      {
-        error: "Too many requests",
-        remainingTime: reset - Date.now(),
-      },
-      {
-        status: 429,
-        headers: {
-          "X-RateLimit-Limit": limit.toString(),
-          "X-RateLimit-Remaining": remaining.toString(),
-          "X-RateLimit-Reset": reset.toString(),
-        },
-      }
-    )
+  // Clean up old entries
+  for (const [key, data] of attempts.entries()) {
+    if (now - data.timestamp > limit.window) {
+      attempts.delete(key)
+    }
   }
 
-  return null
+  // Get current attempts
+  const current = attempts.get(key)
+
+  // If no attempts or window expired, create new entry
+  if (!current || now - current.timestamp > limit.window) {
+    attempts.set(key, { count: 1, timestamp: now })
+    return null
+  }
+
+  // If within window and under limit, increment
+  if (current.count < limit.max) {
+    current.count++
+    return null
+  }
+
+  // Rate limit exceeded
+  return new NextResponse(
+    JSON.stringify({
+      error: "Too many requests",
+      message: `Please try again in ${Math.ceil((limit.window - (now - current.timestamp)) / 1000 / 60)} minutes`,
+    }),
+    {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(Math.ceil((limit.window - (now - current.timestamp)) / 1000)),
+      },
+    }
+  )
 }

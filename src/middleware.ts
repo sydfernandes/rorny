@@ -25,7 +25,14 @@ const securityHeaders = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'origin-when-cross-origin',
   'X-XSS-Protection': '1; mode=block',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';",
+  'Content-Security-Policy': `
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.firebaseapp.com;
+    style-src 'self' 'unsafe-inline';
+    connect-src 'self' https://identitytoolkit.googleapis.com https://*.firebaseapp.com https://*.firebase.com https://firebase.googleapis.com;
+    frame-src 'self' https://*.firebaseapp.com;
+    img-src 'self' data: https:;
+  `.replace(/\s+/g, ' ').trim(),
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
 }
 
@@ -53,7 +60,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Handle authentication for protected routes
-    if (path.startsWith("/dashboard")) {
+    if (path.startsWith("/dashboard") || path.startsWith("/profile-wizard")) {
       response = await withAuth(request, () => NextResponse.next())
     } 
     // Handle authentication for public-only routes
@@ -83,13 +90,13 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Auth endpoints
-    "/api/auth/login",
-    "/api/auth/register",
-    "/api/auth/reset-password",
+    "/api/auth/:path*",
     // Protected routes
     "/dashboard/:path*",
+    "/profile-wizard/:path*",
     // Public-only routes
     "/login",
-    "/register"
+    "/register",
+    "/reset-password"
   ],
 }

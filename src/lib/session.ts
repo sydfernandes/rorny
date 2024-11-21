@@ -32,11 +32,13 @@ export interface Session {
 const sessionOptions = {
   password: process.env.SESSION_SECRET || "complex_password_at_least_32_characters_long",
   cookieName: "rorny_session",
+  ttl: 60 * 60 * 24 * 7, // 1 week in seconds
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     sameSite: "strict" as const,
-    maxAge: 60 * 60 * 24 * 7, // 1 week
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7, // 1 week in seconds
   },
 }
 
@@ -44,42 +46,43 @@ const sessionOptions = {
 const SESSION_TIMEOUT = 30 * 60 * 1000
 
 export async function getSession(req?: NextRequest): Promise<Session> {
-  const session = await getIronSession<SessionData>(
-    req ? req : cookies(),
-    sessionOptions
-  )
+  const session = req 
+    ? await getIronSession<{ data: SessionData }>(req, new Response(), sessionOptions)
+    : await getIronSession<{ data: SessionData }>(cookies(), new Response(), sessionOptions)
 
-  // Initialize session data if not exists
+  // Initialize session data if it doesn't exist
   if (!session.data) {
-    session.data = {
-      userId: "",
-      email: "",
-      isLoggedIn: false,
-      loginTime: 0,
-      lastActive: 0,
-    }
+    session.data = createEmptySessionData()
   }
 
   return session as Session
 }
 
-export async function updateSessionActivity(session: Session): Promise<void> {
-  if (session.data.isLoggedIn) {
-    session.data.lastActive = Date.now()
-    await session.save()
+export function createEmptySessionData(): SessionData {
+  return {
+    userId: "",
+    email: "",
+    isLoggedIn: false,
+    loginTime: 0,
+    lastActive: 0,
   }
 }
 
+export async function updateSessionActivity(session: Session): Promise<void> {
+  session.data.lastActive = Date.now()
+  await session.save()
+}
+
 export async function validateSession(session: Session): Promise<boolean> {
-  if (!session.data.isLoggedIn) {
+  if (!session.data?.isLoggedIn || !session.data?.userId) {
     return false
   }
 
-  const now = Date.now()
-  const timeSinceLastActivity = now - session.data.lastActive
+  const currentTime = Date.now()
+  const timeSinceLastActive = currentTime - (session.data?.lastActive || 0)
 
   // Check if session has timed out
-  if (timeSinceLastActivity > SESSION_TIMEOUT) {
+  if (timeSinceLastActive > SESSION_TIMEOUT) {
     await session.destroy()
     return false
   }
@@ -104,20 +107,21 @@ export async function createSession(
 }
 
 export async function destroySession(session: Session): Promise<void> {
+  session.data = createEmptySessionData()
   await session.destroy()
 }
 
-export function getSessionResponse(
+export async function getSessionResponse(
   response: NextResponse,
   session: Session
-): NextResponse {
-  const headers = new Headers(response.headers)
-  const cookies = headers.getSetCookie()
-
-  // Add session cookie to response
-  cookies.forEach((cookie) => {
-    response.headers.append("Set-Cookie", cookie)
-  })
-
+): Promise<NextResponse> {
+  const sessionCookie = cookies().get(sessionOptions.cookieName)
+  if (sessionCookie) {
+    response.cookies.set(
+      sessionOptions.cookieName,
+      sessionCookie.value,
+      sessionOptions.cookieOptions
+    )
+  }
   return response
 }

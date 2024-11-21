@@ -1,172 +1,61 @@
-/**
- * Email Verification Page
- * Handles email verification process when users click the verification link
- * Supports both verification status display and manual verification requests
- */
-
-"use client"
-
-import { useEffect, useState } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { Metadata } from "next"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Icons } from "@/components/icons"
-import { AuthLayout } from "@/components/auth/auth-layout"
-import { useToast } from "@/hooks/use-toast"
-import { verifyEmail, sendVerificationEmail } from "@/lib/firebase/auth"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+
+export const metadata: Metadata = {
+  title: "Verify Email | Rorny",
+  description: "Verify your email address",
+}
 
 export default function VerifyEmailPage() {
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [status, setStatus] = useState<'verifying' | 'success' | 'error' | 'waiting'>('waiting')
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const { toast } = useToast()
-
-  // Handle verification when the page loads with a code
-  useEffect(() => {
-    const oobCode = searchParams.get('oobCode')
-    if (oobCode) {
-      handleVerification(oobCode)
-    }
-  }, [searchParams])
-
-  async function handleVerification(code: string) {
-    setIsLoading(true)
-    setStatus('verifying')
-    
-    try {
-      const success = await verifyEmail(code)
-      if (success) {
-        setStatus('success')
-        toast({
-          title: "Email verified",
-          description: "Your email has been successfully verified.",
-        })
-      } else {
-        setStatus('error')
-        toast({
-          title: "Verification failed",
-          description: "The verification link may have expired. Please request a new one.",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      setStatus('error')
-      toast({
-        title: "Verification failed",
-        description: "An error occurred during verification. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  async function handleResendVerification() {
-    setIsLoading(true)
-    try {
-      const success = await sendVerificationEmail()
-      if (success) {
-        toast({
-          title: "Verification email sent",
-          description: "Please check your email for the verification link.",
-        })
-      } else {
-        toast({
-          title: "Failed to send email",
-          description: "Please try again or contact support if the problem persists.",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to send verification email. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   return (
-    <AuthLayout>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Email Verification</CardTitle>
-          <CardDescription>
-            {status === 'verifying' && "Verifying your email address..."}
-            {status === 'success' && "Your email has been verified!"}
-            {status === 'error' && "Email verification failed"}
-            {status === 'waiting' && "Please verify your email address"}
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Check your email</CardTitle>
+          <CardDescription className="text-center">
+            We've sent a verification code to your email address
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {status === 'verifying' && (
-            <div className="flex justify-center">
-              <Icons.spinner className="h-6 w-6 animate-spin" />
-            </div>
-          )}
-          
-          {status === 'success' && (
-            <div className="text-center space-y-4">
-              <Icons.check className="h-8 w-8 text-green-500 mx-auto" />
-              <p>Your email has been successfully verified.</p>
-              <Button
-                onClick={() => router.push('/login')}
-                className="w-full"
-              >
-                Continue to Login
-              </Button>
-            </div>
-          )}
-          
-          {status === 'error' && (
-            <div className="text-center space-y-4">
-              <Icons.warning className="h-8 w-8 text-red-500 mx-auto" />
-              <p>The verification link may have expired or is invalid.</p>
-              <Button
-                onClick={handleResendVerification}
-                disabled={isLoading}
-                className="w-full"
-              >
-                {isLoading && (
-                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Request New Verification Link
-              </Button>
-            </div>
-          )}
-          
-          {status === 'waiting' && (
-            <div className="text-center space-y-4">
-              <p>Please check your email for a verification link.</p>
-              <Button
-                onClick={handleResendVerification}
-                disabled={isLoading}
-                className="w-full"
-              >
-                {isLoading && (
-                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Resend Verification Email
-              </Button>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="code">Verification code</Label>
+            <Input
+              id="code"
+              placeholder="Enter 6-digit code"
+              required
+              maxLength={6}
+              className="text-center text-2xl tracking-widest"
+            />
+            <p className="text-sm text-muted-foreground text-center">
+              Enter the 6-digit code we sent to your email
+            </p>
+          </div>
+          <Button className="w-full" type="submit">
+            Verify email
+          </Button>
+          <div className="text-sm text-center space-y-2">
+            <p className="text-muted-foreground">
+              Didn't receive the code?
+            </p>
+            <Button variant="link" className="text-sm" type="button">
+              Resend code
+            </Button>
+          </div>
         </CardContent>
-        <CardFooter className="justify-center">
-          <p className="text-sm text-muted-foreground">
-            Having trouble? Contact our support team.
-          </p>
+        <CardFooter className="flex flex-col space-y-4">
+          <div className="text-sm text-muted-foreground text-center">
+            <Button variant="link" className="px-0" asChild>
+              <Link href="/login">
+                Back to login
+              </Link>
+            </Button>
+          </div>
         </CardFooter>
       </Card>
-    </AuthLayout>
+    </div>
   )
 }

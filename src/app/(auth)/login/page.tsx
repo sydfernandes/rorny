@@ -1,227 +1,136 @@
-/**
- * Login Page Component
- * 
- * Purpose:
- * Handles user authentication through email/password and social providers.
- * Provides a secure and user-friendly login interface with form validation.
- * 
- * Functionality:
- * - Email/password authentication with form validation
- * - Social authentication (Google and Facebook)
- * - Loading states for all authentication methods
- * - Error handling and user feedback
- * - Form validation using Zod schema
- * - Redirects to dashboard on successful login
- * - Links to registration and password reset
- */
-
 "use client"
 
-import { useState } from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import Link from "next/link"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth"
+import { auth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Icons } from "@/components/icons"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
-import { loginSchema } from "@/lib/validations/auth"
-import { signInWithEmail, signInWithGoogle, signInWithFacebook } from "@/lib/auth"
-import type { z } from "zod"
-import { AuthLayout } from "@/components/auth/auth-layout"
-import { SocialButtons } from "@/components/auth/social-buttons"
 
-type FormData = z.infer<typeof loginSchema>
+interface LoginFormData {
+  email: string
+  password: string
+}
 
-export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false)
-  const [isFacebookLoading, setIsFacebookLoading] = useState<boolean>(false)
+function LoginForm() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const router = useRouter()
   const { toast } = useToast()
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  })
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        if (user.emailVerified) {
+          router.push("/dashboard")
+        } else {
+          router.push("/verify-email")
+        }
+      }
+    });
 
-  async function onSubmit(data: FormData) {
+    return () => unsubscribe();
+  }, [router]);
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     setIsLoading(true)
-    const { user, error } = await signInWithEmail(data.email, data.password)
-    setIsLoading(false)
+    setError("")
 
-    if (error) {
-      return toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      })
-    }
+    const formData = new FormData(event.currentTarget)
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
 
-    if (user) {
-      router.push("/dashboard")
-      toast({
-        title: "Success",
-        description: "You have successfully logged in.",
-      })
-    }
-  }
+    try {
+      if (!navigator.onLine) {
+        throw new Error("No internet connection. Please check your network and try again.")
+      }
 
-  const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true)
-    const { user, error } = await signInWithGoogle()
-    setIsGoogleLoading(false)
-
-    if (error) {
-      return toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      })
-    }
-
-    if (user) {
-      router.push("/hello")
-      toast({
-        title: "Success",
-        description: "You have successfully logged in with Google.",
-      })
-    }
-  }
-
-  const handleFacebookSignIn = async () => {
-    setIsFacebookLoading(true)
-    const { user, error } = await signInWithFacebook()
-    setIsFacebookLoading(false)
-
-    if (error) {
-      return toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      })
-    }
-
-    if (user) {
-      router.push("/hello")
-      toast({
-        title: "Success",
-        description: "You have successfully logged in with Facebook.",
-      })
+      await signInWithEmailAndPassword(auth, email, password)
+      
+      // Auth state change listener will handle the redirect
+      
+    } catch (error: any) {
+      console.error('Login error:', error)
+      setIsLoading(false)
+      
+      if (error.code === 'auth/network-request-failed') {
+        setError("Network error. Please check your internet connection and try again.")
+      } else if (error.code === 'auth/user-not-found') {
+        setError("No account found with this email address.")
+      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        setError("Invalid email or password. Please try again.")
+      } else if (error.code === 'auth/too-many-requests') {
+        setError("Too many failed login attempts. Please try again later.")
+      } else if (error.code === 'auth/invalid-email') {
+        setError("Please enter a valid email address.")
+      } else if (error.message) {
+        setError(error.message)
+      } else {
+        setError("An error occurred during login. Please try again.")
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <AuthLayout>
-      <Card className="border-none shadow-lg">
+    <form onSubmit={onSubmit} className="space-y-4">
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="name@example.com"
+          required
+          disabled={isLoading}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          required
+          disabled={isLoading}
+        />
+      </div>
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading && (
+          <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+        )}
+        Sign In
+      </Button>
+    </form>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight">Welcome back</CardTitle>
-          <CardDescription>
-            Enter your email and password to sign in to your account
+          <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
+          <CardDescription className="text-center">
+            Enter your email and password to login
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <SocialButtons
-            onGoogleClick={handleGoogleSignIn}
-            onFacebookClick={handleFacebookSignIn}
-            isGoogleLoading={isGoogleLoading}
-            isFacebookLoading={isFacebookLoading}
-          />
-          
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator className="w-full" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-            </div>
-          </div>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="name@example.com" 
-                        type="email"
-                        autoComplete="email"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Enter your password" 
-                        type="password"
-                        autoComplete="current-password"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex items-center justify-between">
-                <Link
-                  href="/reset-password"
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <Button className="w-full" type="submit" disabled={isLoading}>
-                {isLoading && (
-                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Sign In
-              </Button>
-            </form>
-          </Form>
+        <CardContent>
+          <LoginForm />
         </CardContent>
-        <CardFooter>
-          <p className="text-sm text-muted-foreground text-center w-full">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="font-medium text-primary hover:underline">
-              Sign up
-            </Link>
-          </p>
-        </CardFooter>
       </Card>
-    </AuthLayout>
+    </div>
   )
 }

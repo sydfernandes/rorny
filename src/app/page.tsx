@@ -1,5 +1,6 @@
-import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu"
+import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default function Home() {
   return (
@@ -12,23 +13,31 @@ export default function Home() {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger>Features</NavigationMenuTrigger>
+                <NavigationMenuTrigger>Why Rorny</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="grid gap-3 p-6 w-[400px]">
-                    <div className="font-medium">Discover</div>
+                    <div className="font-medium">Our Mission</div>
                     <div className="text-sm text-muted-foreground">
-                      Explore our powerful features
+                      Creating a safe and inclusive space for meaningful connections in the LGBTQA+ community
+                    </div>
+                    <div className="font-medium mt-4">Community Guidelines</div>
+                    <div className="text-sm text-muted-foreground">
+                      Learn about our commitment to safety and respect
                     </div>
                   </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
+                <NavigationMenuTrigger>Safety</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="grid gap-3 p-6 w-[400px]">
-                    <div className="font-medium">Documentation</div>
+                    <div className="font-medium">Privacy First</div>
                     <div className="text-sm text-muted-foreground">
-                      Learn how to get started
+                      Your privacy and safety are our top priorities
+                    </div>
+                    <div className="font-medium mt-4">Support</div>
+                    <div className="text-sm text-muted-foreground">
+                      24/7 support for our community members
                     </div>
                   </div>
                 </NavigationMenuContent>
@@ -37,8 +46,12 @@ export default function Home() {
           </NavigationMenu>
 
           <div className="flex gap-4">
-            <Button variant="ghost">Sign In</Button>
-            <Button>Get Started</Button>
+            <Button variant="ghost" asChild>
+              <Link href="/login">Sign In</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/register">Join Now</Link>
+            </Button>
           </div>
         </div>
       </div>
@@ -47,14 +60,19 @@ export default function Home() {
       <section className="pt-32 pb-16 container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center space-y-8">
           <h1 className="text-6xl font-bold tracking-tight">
-            Your Gateway to Amazing Experiences
+            Love Has No Labels
           </h1>
           <p className="text-xl text-muted-foreground">
-            Discover a new way to connect, share, and grow with our platform
+            Welcome to Rorny, where the LGBTQA+ community finds meaningful connections in a safe, 
+            inclusive, and respectful environment. Be yourself, be proud, be loved.
           </p>
           <div className="flex gap-4 justify-center">
-            <Button size="lg">Get Started</Button>
-            <Button size="lg" variant="outline">Learn More</Button>
+            <Button size="lg" asChild>
+              <Link href="/register">Start Your Journey</Link>
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/about">Our Story</Link>
+            </Button>
           </div>
         </div>
       </section>
