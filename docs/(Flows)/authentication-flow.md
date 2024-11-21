@@ -15,17 +15,23 @@
    - User logs in/registers via any entry point
    - System validates credentials
 
-2. **Profile Check**
-   - System verifies profile completion
+2. **Email Verification** _(for new registrations)_
+   - System sends verification email
+   - User must verify email before proceeding
+   - Unverified users cannot access protected features
+
+3. **Profile Check**
+   - System verifies profile completion status in Firestore
    - New users → Profile Wizard
    - Incomplete profiles → Profile Wizard
 
-3. **Profile Wizard**
+4. **Profile Wizard**
    - Multi-step guided process with progress indicators
    - All fields are required for completion
    - Required completion before app access
    - Progress saved between sessions
-   
+   - Completion status stored in Firestore (`profileWizardCompleted: boolean`)
+
    ### Step 1: Personal Information
    - Username (3-30 characters, unique, alphanumeric with dots and underscores)
    - Display Name (16 char limit)
@@ -41,7 +47,7 @@
    - Relationship Status
    - Looking For (multi-select)
 
-4. **Access Grant**
+5. **Access Grant**
    - Complete profile → App-Home
    - Incomplete profile → Return to Profile Wizard
 
@@ -64,9 +70,15 @@ graph TD
     G --> I
     H --> I
     
-    I -->|Success| J[Check Profile]
+    I -->|Success| N{New Registration?}
     I -->|Fail| K[Show Error]
     K --> B
+    
+    N -->|Yes| O[Send Verification Email]
+    O --> P{Email Verified?}
+    P -->|No| Q[Show Verification Required]
+    P -->|Yes| J[Check Profile]
+    N -->|No| J
     
     J -->|Complete| L[App Home]
     J -->|Incomplete| M[Profile Wizard]
@@ -99,13 +111,8 @@ graph TD
     
     H1 & H2 & H3 & H4 & H5 --> I{Step 2<br>Complete?}
     I -->|No| G
-    I -->|Yes| J[Save Profile]
-    
-    G --> K[Exit]
-    K --> L[Next Login]
-    L --> A
-    
-    J --> D
+    I -->|Yes| J[Mark Complete in Firestore]
+    J --> K[Redirect to App Home]
 ```
 
 ## Navigation

@@ -27,7 +27,7 @@ export function PasswordValidation({ value }: PasswordValidationProps) {
     {
       id: 4,
       label: "Contains a special character",
-      pattern: /[!@#$%^&*(),.?":{}|<>]/,
+      pattern: /[-!@#$%^&*(),.?":{}|<>]/,
     },
   ]
 
