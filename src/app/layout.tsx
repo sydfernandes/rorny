@@ -1,8 +1,7 @@
-import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/lib/providers/theme-provider";
+import { cn } from "@/lib/utils/index";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -15,11 +14,6 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   weight: "100 900",
 });
-
-export const metadata: Metadata = {
-  title: 'Rorny',
-  description: 'Secure authentication system',
-}
 
 export default function RootLayout({
   children,
@@ -39,6 +33,7 @@ export default function RootLayout({
           attribute="class" 
           defaultTheme="system" 
           enableSystem
+          disableTransitionOnChange
         >
           {children}
         </ThemeProvider>

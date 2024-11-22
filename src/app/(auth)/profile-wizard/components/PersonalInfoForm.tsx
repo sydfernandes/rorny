@@ -4,35 +4,50 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { GENDER, PRONOUNS } from "@/lib/constants/profile"
+import { Form } from "@/components/ui/form"
+import { Icons } from "@/components/icons"
+import { FormInput, FormTextarea, FormSelect } from "@/components/form/form-fields"
+
+const GENDER = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "non_binary", label: "Non-binary" },
+  { value: "transgender", label: "Transgender" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+] as const
+
+const PRONOUNS = [
+  { value: "he_him", label: "He/Him" },
+  { value: "she_her", label: "She/Her" },
+  { value: "they_them", label: "They/Them" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+] as const
 
 const personalInfoSchema = z.object({
   username: z.string()
-    .min(5, "Username must be at least 5 characters")
-    .max(30, "Username must be 30 characters or less")
-    .regex(/^[a-zA-Z0-9._]+$/, "Username can only contain letters and numbers"),
-  
+    .min(3, "Username must be at least 3 characters")
+    .max(30, "Username must be less than 30 characters")
+    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
   displayName: z.string()
-    .min(1, "Display name is required")
-    .max(16, "Display name must be 16 characters or less"),
-  
+    .min(2, "Display name must be at least 2 characters")
+    .max(16, "Display name must be less than 16 characters"),
   bioText: z.string()
-    .min(1, "Bio is required")
-    .max(240, "Bio must be 240 characters or less"),
-  
+    .max(240, "Bio must be less than 240 characters")
+    .optional(),
   birthdate: z.string()
-    .min(1, "Birthdate is required")
     .refine((date) => {
-      const age = Math.floor((new Date().getTime() - new Date(date).getTime()) / 31557600000)
+      const today = new Date()
+      const birthDate = new Date(date)
+      let age = today.getFullYear() - birthDate.getFullYear()
+      const m = today.getMonth() - birthDate.getMonth()
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--
+      }
       return age >= 18
     }, "You must be at least 18 years old"),
-  
   gender: z.string().min(1, "Gender is required"),
-  
   pronouns: z.string().min(1, "Pronouns are required")
 })
 
@@ -41,134 +56,85 @@ type PersonalInfoFormData = z.infer<typeof personalInfoSchema>
 interface PersonalInfoFormProps {
   initialData: Partial<PersonalInfoFormData>
   onComplete: (data: PersonalInfoFormData) => void
+  isLoading: boolean
 }
 
-export default function PersonalInfoForm({ initialData, onComplete }: PersonalInfoFormProps) {
+export default function PersonalInfoForm({ 
+  initialData, 
+  onComplete,
+  isLoading 
+}: PersonalInfoFormProps) {
   const form = useForm<PersonalInfoFormData>({
     resolver: zodResolver(personalInfoSchema),
-    defaultValues: initialData
+    defaultValues: {
+      username: "",
+      displayName: "",
+      bioText: "",
+      birthdate: "",
+      gender: "",
+      pronouns: "",
+      ...initialData
+    }
   })
-
-  const onSubmit = (data: PersonalInfoFormData) => {
-    onComplete(data)
-  }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
+      <form onSubmit={form.handleSubmit(onComplete)} className="space-y-4">
+        <FormInput
           control={form.control}
           name="username"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Username</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Choose a unique username" maxLength={30} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Username"
+          placeholder="Choose a unique username"
         />
 
-        <FormField
+        <FormInput
           control={form.control}
           name="displayName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Display Name</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="Your display name" maxLength={16} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Display Name"
+          placeholder="Your display name"
         />
 
-        <FormField
+        <FormTextarea
           control={form.control}
           name="bioText"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Bio</FormLabel>
-              <FormControl>
-                <Textarea 
-                  {...field} 
-                  placeholder="Tell others a little about yourself!"
-                  maxLength={240}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Bio"
+          placeholder="Tell us about yourself (optional)"
         />
 
-        <FormField
+        <FormInput
           control={form.control}
           name="birthdate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Birthdate</FormLabel>
-              <FormControl>
-                <Input {...field} type="date" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Date of Birth"
+          type="date"
+          max={new Date().toISOString().split("T")[0]}
         />
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="gender"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Gender</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your gender" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {GENDER.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormSelect
+          control={form.control}
+          name="gender"
+          label="Gender"
+          options={GENDER}
+          placeholder="Select your gender"
+        />
 
-          <FormField
-            control={form.control}
-            name="pronouns"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pronouns</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your pronouns" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {PRONOUNS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormSelect
+          control={form.control}
+          name="pronouns"
+          label="Pronouns"
+          options={PRONOUNS}
+          placeholder="Select your pronouns"
+        />
 
-        <Button type="submit">Next</Button>
+        <Button type="submit" disabled={isLoading} className="w-full">
+          {isLoading ? (
+            <>
+              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Continue"
+          )}
+        </Button>
       </form>
     </Form>
   )

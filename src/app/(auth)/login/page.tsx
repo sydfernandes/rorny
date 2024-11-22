@@ -1,46 +1,79 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from "firebase/auth"
 import { auth } from "@/lib/firebase"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Icons } from "@/components/ui/icons"
 import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
-import { Eye, EyeOff, Facebook, Loader2, Mail } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { getFirebaseErrorMessage, createSession } from "@/lib/auth/utils"
+import { loginSchema, type LoginFormData } from "@/lib/auth/validation"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
 
-interface LoginFormData {
-  email: string
-  password: string
-}
-
-function LoginForm() {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const googleProvider = new GoogleAuthProvider()
-  const facebookProvider = new FacebookAuthProvider()
+  const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  })
+
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true)
-    setError("")
-
-    const formData = new FormData(event.currentTarget)
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
 
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-      router.push("/home")
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password)
+      const user = userCredential.user
+
+      if (!user.emailVerified) {
+        toast({
+          title: "Email verification required",
+          description: "Please verify your email before logging in.",
+          variant: "destructive",
+        })
+        router.push("/verify-email")
+        return
+      }
+
+      // Create session
+      const idToken = await user.getIdToken()
+      await createSession(idToken)
+
+      // Check profile completion status
+      const profileResponse = await fetch("/api/profile/status", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      })
+
+      if (!profileResponse.ok) {
+        router.push("/profile-wizard")
+        return
+      }
+
+      router.push("/dashboard")
     } catch (error: any) {
-      setError(error.message)
+      console.error("Login error:", error)
+      toast({
+        title: "Login failed",
+        description: getFirebaseErrorMessage(error),
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -49,155 +82,129 @@ function LoginForm() {
   const handleSocialLogin = async (provider: GoogleAuthProvider | FacebookAuthProvider) => {
     try {
       setIsLoading(true)
-      setError("")
-      await signInWithPopup(auth, provider)
-      router.push("/home")
+      const result = await signInWithPopup(auth, provider)
+      
+      // Create session
+      const idToken = await result.user.getIdToken()
+      await createSession(idToken)
+      
+      router.push("/dashboard")
     } catch (error: any) {
-      setError(error.message)
+      console.error("Social login error:", error)
+      toast({
+        title: "Login failed",
+        description: getFirebaseErrorMessage(error),
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="m@example.com"
-            required
-            disabled={isLoading}
-          />
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Button
-              variant="link"
-              className="px-0 font-normal"
-              size="sm"
-              asChild
-            >
-              <Link href="/reset-password">
-                Forgot password?
+    <div className="container flex min-h-screen items-center justify-center">
+      <Card className="w-full max-w-lg">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Login</CardTitle>
+          <CardDescription>Enter your email and password to login to your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  placeholder="name@example.com"
+                  type="email"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect="off"
+                  disabled={isLoading}
+                  {...register("email")}
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-500">{errors.email.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    disabled={isLoading}
+                    {...register("password")}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <Icons.eye className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Icons.eyeOff className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    <span className="sr-only">
+                      {showPassword ? "Hide password" : "Show password"}
+                    </span>
+                  </Button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-red-500">{errors.password.message}</p>
+                )}
+              </div>
+              <Button disabled={isLoading} type="submit" className="w-full">
+                {isLoading && (
+                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Login
+              </Button>
+            </form>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                variant="outline"
+                disabled={isLoading}
+                onClick={() => handleSocialLogin(new GoogleAuthProvider())}
+              >
+                <Icons.google className="mr-2 h-4 w-4" />
+                Google
+              </Button>
+              <Button
+                variant="outline"
+                disabled={isLoading}
+                onClick={() => handleSocialLogin(new FacebookAuthProvider())}
+              >
+                <Icons.facebook className="mr-2 h-4 w-4" />
+                Facebook
+              </Button>
+            </div>
+            <div className="text-center text-sm">
+              Don&apos;t have an account?{" "}
+              <Link href="/register" className="font-medium underline">
+                Register
               </Link>
-            </Button>
+            </div>
+            <div className="text-center text-sm">
+              <Link href="/reset-password" className="font-medium underline">
+                Forgot your password?
+              </Link>
+            </div>
           </div>
-          <div className="relative">
-            <Input
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              required
-              disabled={isLoading}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
-              tabIndex={-1}
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <Button disabled={isLoading} type="submit" className="w-full">
-        {isLoading && (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        )}
-        Sign In
-      </Button>
-
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
-            Or continue with
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Button
-          variant="outline"
-          disabled={isLoading}
-          onClick={() => handleSocialLogin(googleProvider)}
-          type="button"
-        >
-          <Mail className="mr-2 h-4 w-4" />
-          Google
-        </Button>
-        <Button
-          variant="outline"
-          disabled={isLoading}
-          onClick={() => handleSocialLogin(facebookProvider)}
-          type="button"
-        >
-          <Facebook className="mr-2 h-4 w-4" />
-          Facebook
-        </Button>
-      </div>
-
-      <div className="text-center text-sm text-muted-foreground">
-        Don't have an account?{" "}
-        <Link href="/register" className="underline underline-offset-4 hover:text-primary">
-          Sign up
-        </Link>
-      </div>
-    </form>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <div className="container relative min-h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-      <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
-        <div className="absolute inset-0 bg-zinc-900" />
-        <div className="relative z-20 flex items-center text-lg font-medium">
-          <Link href="/">Rorny</Link>
-        </div>
-        <div className="relative z-20 mt-auto">
-          <blockquote className="space-y-2">
-            <p className="text-lg">
-              "This library has saved me countless hours of work and helped me deliver stunning designs to my clients faster than ever before."
-            </p>
-            <footer className="text-sm">Sofia Davis</footer>
-          </blockquote>
-        </div>
-      </div>
-      <div className="lg:p-8">
-        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-          <Card className="w-full">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
-              <CardDescription className="text-center">
-                Enter your email and password to sign in
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <LoginForm />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

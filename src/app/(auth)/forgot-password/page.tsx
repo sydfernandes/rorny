@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Icons } from "@/components/icons"
+import { Icons } from "@/components/ui/icons"
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)

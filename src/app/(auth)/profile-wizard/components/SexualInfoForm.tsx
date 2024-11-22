@@ -4,32 +4,83 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { 
-  SEXUAL_ORIENTATION,
-  SEXUAL_POSITION,
-  INTERESTED_IN,
-  RELATIONSHIP_STATUS,
-  LOOKING_FOR
-} from "@/lib/constants/profile"
+import { Form } from "@/components/ui/form"
+import { Icons } from "@/components/icons"
+import { FormInput, FormSelect } from "@/components/form/form-fields"
+
+const BODY_TYPE = [
+  { value: "athletic", label: "Athletic" },
+  { value: "average", label: "Average" },
+  { value: "slim", label: "Slim" },
+  { value: "curvy", label: "Curvy" },
+  { value: "muscular", label: "Muscular" },
+  { value: "plus_size", label: "Plus Size" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+] as const
+
+const ETHNICITY = [
+  { value: "asian", label: "Asian" },
+  { value: "black", label: "Black" },
+  { value: "hispanic", label: "Hispanic" },
+  { value: "middle_eastern", label: "Middle Eastern" },
+  { value: "mixed", label: "Mixed" },
+  { value: "native_american", label: "Native American" },
+  { value: "pacific_islander", label: "Pacific Islander" },
+  { value: "white", label: "White" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+] as const
+
+const SEXUAL_ORIENTATION = [
+  { value: "straight", label: "Straight" },
+  { value: "gay", label: "Gay" },
+  { value: "lesbian", label: "Lesbian" },
+  { value: "bisexual", label: "Bisexual" },
+  { value: "pansexual", label: "Pansexual" },
+  { value: "asexual", label: "Asexual" },
+  { value: "queer", label: "Queer" },
+  { value: "questioning", label: "Questioning" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+] as const
+
+const RELATIONSHIP_STATUS = [
+  { value: "single", label: "Single" },
+  { value: "divorced", label: "Divorced" },
+  { value: "separated", label: "Separated" },
+  { value: "widowed", label: "Widowed" },
+  { value: "its_complicated", label: "It's Complicated" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+] as const
+
+const LOOKING_FOR = [
+  { value: "friendship", label: "Friendship" },
+  { value: "dating", label: "Dating" },
+  { value: "long_term", label: "Long-term Relationship" },
+  { value: "marriage", label: "Marriage" },
+  { value: "casual", label: "Casual" },
+  { value: "not_sure", label: "Not Sure" },
+] as const
 
 const sexualInfoSchema = z.object({
+  height: z.number()
+    .min(120, "Height must be at least 120cm")
+    .max(250, "Height must be less than 250cm")
+    .optional(),
+  weight: z.number()
+    .min(30, "Weight must be at least 30kg")
+    .max(250, "Weight must be less than 250kg")
+    .optional(),
+  bodyType: z.string()
+    .min(1, "Body type is required"),
+  ethnicity: z.string()
+    .min(1, "Ethnicity is required"),
   sexualOrientation: z.string()
     .min(1, "Sexual orientation is required"),
-  
-  sexualPosition: z.string()
-    .min(1, "Sexual position is required"),
-  
-  interestedIn: z.array(z.string())
-    .min(1, "You must select at least one interest"),
-  
   relationshipStatus: z.string()
     .min(1, "Relationship status is required"),
-  
   lookingFor: z.array(z.string())
-    .min(1, "You must select at least one option for what you're looking for")
+    .min(1, "Please select at least one option")
+    .max(3, "Please select at most 3 options")
 })
 
 type SexualInfoFormData = z.infer<typeof sexualInfoSchema>
@@ -38,170 +89,114 @@ interface SexualInfoFormProps {
   initialData: Partial<SexualInfoFormData>
   onComplete: (data: SexualInfoFormData) => void
   onBack: () => void
+  isLoading: boolean
 }
 
-export default function SexualInfoForm({ initialData, onComplete, onBack }: SexualInfoFormProps) {
+export default function SexualInfoForm({
+  initialData,
+  onComplete,
+  onBack,
+  isLoading
+}: SexualInfoFormProps) {
   const form = useForm<SexualInfoFormData>({
     resolver: zodResolver(sexualInfoSchema),
     defaultValues: {
-      ...initialData,
-      sexualOrientation: initialData.sexualOrientation || "",
+      height: undefined,
+      weight: undefined,
+      bodyType: "",
+      ethnicity: "",
+      sexualOrientation: "",
+      relationshipStatus: "",
+      lookingFor: [],
+      ...initialData
     }
   })
 
-  const onSubmit = (data: SexualInfoFormData) => {
-    onComplete(data)
-  }
-
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
+      <form onSubmit={form.handleSubmit(onComplete)} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <FormInput
+            control={form.control}
+            name="height"
+            label="Height (cm)"
+            type="number"
+            placeholder="170"
+          />
+
+          <FormInput
+            control={form.control}
+            name="weight"
+            label="Weight (kg)"
+            type="number"
+            placeholder="70"
+          />
+        </div>
+
+        <FormSelect
+          control={form.control}
+          name="bodyType"
+          label="Body Type"
+          options={BODY_TYPE}
+          placeholder="Select your body type"
+        />
+
+        <FormSelect
+          control={form.control}
+          name="ethnicity"
+          label="Ethnicity"
+          options={ETHNICITY}
+          placeholder="Select your ethnicity"
+        />
+
+        <FormSelect
           control={form.control}
           name="sexualOrientation"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Sexual Orientation</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your sexual orientation" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {SEXUAL_ORIENTATION.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Sexual Orientation"
+          options={SEXUAL_ORIENTATION}
+          placeholder="Select your sexual orientation"
         />
 
-        <FormField
-          control={form.control}
-          name="sexualPosition"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Sexual Position</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your position" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {SEXUAL_POSITION.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="interestedIn"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Interested In</FormLabel>
-              <FormControl>
-                <ToggleGroup 
-                  type="multiple"
-                  className="flex flex-wrap gap-2"
-                  value={field.value}
-                  onValueChange={field.onChange}
-                >
-                  {INTERESTED_IN.map((option) => (
-                    <ToggleGroupItem
-                      key={option.value}
-                      value={option.value}
-                      aria-label={option.label}
-                      className="px-3 py-2"
-                    >
-                      {option.label}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
+        <FormSelect
           control={form.control}
           name="relationshipStatus"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Relationship Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your relationship status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {RELATIONSHIP_STATUS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Relationship Status"
+          options={RELATIONSHIP_STATUS}
+          placeholder="Select your relationship status"
         />
 
-        <FormField
+        <FormSelect
           control={form.control}
           name="lookingFor"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Looking For</FormLabel>
-              <FormControl>
-                <ToggleGroup 
-                  type="multiple"
-                  className="flex flex-wrap gap-2"
-                  value={field.value}
-                  onValueChange={field.onChange}
-                >
-                  {LOOKING_FOR.map((option) => (
-                    <ToggleGroupItem
-                      key={option.value}
-                      value={option.value}
-                      aria-label={option.label}
-                      className="px-3 py-2"
-                    >
-                      {option.label}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Looking For"
+          description="Select up to 3 options"
+          options={LOOKING_FOR}
+          placeholder="What are you looking for?"
+          multiple={true}
         />
 
         <div className="flex gap-4">
           <Button 
             type="button" 
-            variant="outline" 
+            variant="outline"
             className="flex-1"
             onClick={onBack}
           >
             Back
           </Button>
-          <Button type="submit" className="flex-1">
-            Complete Profile
+          <Button 
+            type="submit" 
+            disabled={isLoading} 
+            className="flex-1"
+          >
+            {isLoading ? (
+              <>
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Complete Profile"
+            )}
           </Button>
         </div>
       </form>

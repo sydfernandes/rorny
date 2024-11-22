@@ -13,7 +13,7 @@
  * - Supports custom className prop for additional styling
  */
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils/index"
 
 interface AuthLayoutProps {
   children: React.ReactNode

@@ -1,36 +1,33 @@
 "use client"
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/firebase"
 import { onAuthStateChanged, sendEmailVerification } from "firebase/auth"
+import { toast } from "sonner"
 import { Icons } from "@/components/icons"
-import { useToast } from "@/hooks/use-toast"
 
 export default function VerifyEmailPage() {
   const router = useRouter()
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        // No user is signed in, redirect to register
-        router.push('/register')
+        router.push('/login')
         return
       }
 
       if (user.emailVerified) {
-        // User is verified, redirect to home
-        router.push('/home')
+        toast.success("Email already verified!")
+        router.push('/dashboard')
         return
       }
 
-      // User exists but not verified, show their email
       setUserEmail(user.email)
     })
 
@@ -38,79 +35,36 @@ export default function VerifyEmailPage() {
   }, [router])
 
   const handleResendVerification = async () => {
-    if (!auth.currentUser) {
-      toast({
-        title: "Error",
-        description: "No user found. Please try logging in again.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(true)
     try {
-      await sendEmailVerification(auth.currentUser, {
-        url: `${window.location.origin}/home`,
-      })
-      toast({
-        title: "Email sent!",
-        description: "A new verification link has been sent to your email.",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send verification email.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleCheckVerification = async () => {
-    if (!auth.currentUser) return
-
-    setIsLoading(true)
-    try {
-      await auth.currentUser.reload()
-      if (auth.currentUser.emailVerified) {
-        toast({
-          title: "Success!",
-          description: "Email verified successfully! Redirecting to app...",
-        })
-        router.push('/home')
-      } else {
-        toast({
-          description: "Email not yet verified. Please check your email and click the verification link.",
-          variant: "destructive",
-        })
+      setIsLoading(true)
+      const user = auth.currentUser
+      if (!user) {
+        toast.error("No user found. Please login again.")
+        router.push('/login')
+        return
       }
+
+      await sendEmailVerification(user)
+      toast.success("Verification email sent! Please check your inbox.")
     } catch (error) {
-      console.error(error)
-      toast({
-        title: "Error",
-        description: "Failed to check verification status.",
-        variant: "destructive",
-      })
+      console.error("Error sending verification email:", error)
+      toast.error("Failed to send verification email. Please try again.")
     } finally {
       setIsLoading(false)
     }
-  }
-
-  if (!userEmail) {
-    return null // Don't render anything while checking auth state
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="container flex min-h-screen items-center justify-center">
+      <Card className="w-full max-w-lg">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Verify your email</CardTitle>
           <CardDescription className="text-center">
-            We've sent a verification link to {userEmail}
+            We've sent a verification link to{" "}
+            <span className="font-medium">{userEmail}</span>
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           <div className="space-y-4">
             <div className="space-y-2">
               <h3 className="font-medium">Steps to verify your email:</h3>
@@ -118,47 +72,19 @@ export default function VerifyEmailPage() {
                 <li>Open your email inbox</li>
                 <li>Look for an email from Rorny</li>
                 <li>Click the verification link in the email</li>
-                <li>Click the button below to continue</li>
+                <li>Return to this page and refresh</li>
               </ol>
             </div>
-            <Button 
-              className="w-full" 
-              onClick={handleCheckVerification}
+            <Button
+              className="w-full"
+              onClick={handleResendVerification}
               disabled={isLoading}
             >
-              {isLoading && <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />}
-              I've clicked the verification link
+              {isLoading && (
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Resend verification email
             </Button>
-          </div>
-
-          <div className="space-y-4 pt-4 border-t">
-            <div className="text-sm text-center space-y-2">
-              <p className="text-muted-foreground">
-                Can't find the verification email?
-              </p>
-              <Button 
-                variant="link" 
-                className="text-sm"
-                onClick={handleResendVerification}
-                disabled={isLoading}
-              >
-                {isLoading && <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />}
-                Resend verification email
-              </Button>
-            </div>
-
-            <div className="text-sm text-center space-y-2">
-              <p className="text-muted-foreground">
-                Entered wrong email?
-              </p>
-              <Button 
-                variant="link" 
-                className="text-sm" 
-                asChild
-              >
-                <Link href="/register">Register with different email</Link>
-              </Button>
-            </div>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
